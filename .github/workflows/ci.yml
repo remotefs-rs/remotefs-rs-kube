@@ -1,0 +1,37 @@
+name: build
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y libssl-dev curl
+          curl -LO https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+          sudo install minikube-linux-amd64 /usr/local/bin/minikube && rm minikube-linux-amd64
+      - name: Setup containers
+        run: docker-compose -f "tests/docker-compose.yml" up -d --build
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          components: rustfmt, clippy
+      - name: Run tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --features integration-tests --no-fail-fast
+        env:
+          RUST_LOG: trace
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy (rustls)
+        run: cargo clippy -- -Dwarnings
