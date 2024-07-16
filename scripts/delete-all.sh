@@ -12,16 +12,7 @@ fi
 
 # start minikube
 minikube start
-
-export MINIKUBE_IP="$(minikube ip)"
-echo "minikube IP: $MINIKUBE_IP"
-
-$KUBECTL create namespace default
-
-cargo test --features integration-tests $@
-RC=$?
+$KUBECTL delete pods --all
 
 # stop
 minikube stop
-
-exit $RC
