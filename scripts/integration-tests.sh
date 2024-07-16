@@ -21,6 +21,9 @@ $KUBECTL create namespace default
 cargo test --features integration-tests $@
 RC=$?
 
+# delete all
+kubectl delete pods --all
+
 # stop
 minikube stop
 
