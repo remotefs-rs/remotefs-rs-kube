@@ -29,8 +29,10 @@
 //!
 //! // import remotefs trait and client
 //! use remotefs::RemoteFs;
-//! use remotefs_ssh::{SshConfigParseRule, SftpFs, SshOpts};
+//! use remotefs_kube::KubeContainerFs;
 //! use std::path::Path;
+//! use std::sync::Arc;
+//! use tokio::runtime::Runtime;
 //!
 //! let rt = Arc::new(
 //!     tokio::runtime::Builder::new_current_thread()
@@ -38,7 +40,7 @@
 //!     .build()
 //!     .unwrap(),
 //! );
-//! let mut client: KubeFs = KubeFs::new("my-pod", &rt);
+//! let mut client: KubeContainerFs = KubeContainerFs::new("my-pod", &rt);
 //!
 //! // connect
 //! assert!(client.connect().is_ok());
@@ -65,11 +67,13 @@ extern crate lazy_regex;
 #[macro_use]
 extern crate log;
 
-mod client;
+mod kube_container_fs;
+mod kube_multipod_fs;
 mod utils;
 
-pub use client::KubeFs;
 pub use kube::Config;
+pub use kube_container_fs::KubeContainerFs;
+pub use kube_multipod_fs::KubeMultiPodFs;
 
 // -- test logging
 #[cfg(test)]
