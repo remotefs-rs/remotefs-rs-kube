@@ -1799,37 +1799,22 @@ mod test {
     }
 
     #[cfg(feature = "integration-tests")]
-    fn finalize_client(pods: Api<Pod>, mut client: KubeContainerFs) {
-        // Get working directory
-
-        use kube::api::DeleteParams;
-        use kube::ResourceExt as _;
-        let wrkdir = client.pwd().ok().unwrap();
-        // Remove directory
-        assert!(client.remove_dir_all(wrkdir.as_path()).is_ok());
+    fn finalize_client(_pods: Api<Pod>, mut client: KubeContainerFs) {
         assert!(client.disconnect().is_ok());
-
-        // cleanup pods
-        let pod_name = client.pod_name;
-        client.runtime.block_on(async {
-            let dp = DeleteParams::default();
-            pods.delete(&pod_name, &dp).await.unwrap().map_left(|pdel| {
-                info!("Deleting {pod_name} pod started: {:?}", pdel);
-                assert_eq!(pdel.name_any(), pod_name);
-            });
-        })
     }
 
     #[cfg(feature = "integration-tests")]
     fn generate_pod_name() -> String {
-        use rand::distributions::{Alphanumeric, DistString};
-        use rand::thread_rng;
-        let random_string: String = Alphanumeric
-            .sample_string(&mut thread_rng(), 8)
-            .chars()
+        use rand::distributions::Alphanumeric;
+        use rand::{thread_rng, Rng as _};
+
+        let mut rng = thread_rng();
+        let random_string: String = std::iter::repeat(())
+            .map(|()| rng.sample(Alphanumeric))
+            .map(char::from)
             .filter(|c| c.is_alphabetic())
             .map(|c| c.to_ascii_lowercase())
-            .take(8)
+            .take(12)
             .collect();
 
         format!("test-{}", random_string)

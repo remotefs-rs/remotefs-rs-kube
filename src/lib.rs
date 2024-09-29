@@ -78,5 +78,8 @@ pub use kube_multipod_fs::KubeMultiPodFs;
 // -- test logging
 #[cfg(test)]
 pub fn log_init() {
-    let _ = env_logger::builder().is_test(true).try_init();
+    let _ = env_logger::builder()
+        .is_test(true)
+        .filter_module("remotefs_kube", log::LevelFilter::Debug)
+        .try_init();
 }
