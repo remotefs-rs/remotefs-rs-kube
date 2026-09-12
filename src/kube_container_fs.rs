@@ -766,11 +766,21 @@ impl RemoteFs for KubeContainerFs {
                 .await
                 .map_err(|err| RemoteError::new_ex(RemoteErrorType::ProtocolError, err))?;
 
-            cmd.stdin()
-                .ok_or_else(|| RemoteError::new(RemoteErrorType::ProtocolError))?
+            let mut stdin = cmd
+                .stdin()
+                .ok_or_else(|| RemoteError::new(RemoteErrorType::ProtocolError))?;
+            stdin
                 .write_all(&data)
                 .await
                 .map_err(|err| RemoteError::new_ex(RemoteErrorType::ProtocolError, err))?;
+            // Signal EOF to `tar` explicitly instead of relying on the
+            // writer being dropped, so it does not keep waiting for more
+            // input on the exec stream.
+            stdin
+                .shutdown()
+                .await
+                .map_err(|err| RemoteError::new_ex(RemoteErrorType::ProtocolError, err))?;
+            drop(stdin);
 
             debug!("uploaded archive to kube at: {}", path.display());
 
