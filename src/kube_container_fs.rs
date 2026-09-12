@@ -753,6 +753,7 @@ impl RemoteFs for KubeContainerFs {
             let attach_params = AttachParams::default()
                 .container(self.container.clone())
                 .stdin(true)
+                .stdout(false)
                 .stderr(false);
             let mut cmd = self
                 .pods
@@ -765,6 +766,16 @@ impl RemoteFs for KubeContainerFs {
                 )
                 .await
                 .map_err(|err| RemoteError::new_ex(RemoteErrorType::ProtocolError, err))?;
+
+            // Take the status future before writing, so we can wait for the
+            // remote `tar` to actually finish instead of racing it: `join()`
+            // drops the status channel receiver as soon as it is called,
+            // and this command reads no stdout/stderr to block on in the
+            // meantime, so calling `join()` alone here would very likely
+            // observe the command as still running and fail with "failed to
+            // send status object" once the background task tries to report
+            // it on a receiver that already went away.
+            let status = cmd.take_status();
 
             let mut stdin = cmd
                 .stdin()
@@ -781,6 +792,10 @@ impl RemoteFs for KubeContainerFs {
                 .await
                 .map_err(|err| RemoteError::new_ex(RemoteErrorType::ProtocolError, err))?;
             drop(stdin);
+
+            if let Some(status) = status {
+                status.await;
+            }
 
             debug!("uploaded archive to kube at: {}", path.display());
 
