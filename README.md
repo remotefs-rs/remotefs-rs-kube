@@ -177,6 +177,15 @@ Note: `connect()`, `disconnect()` and `is_connected()` **MUST** always be suppor
 
 ---
 
+## Contributing 🤝
+
+Contributions, bug reports, new features, and questions are welcome! 😉
+If you have any questions or concerns, or you want to suggest a new feature, or you want just want to improve remotefs, feel free to open an issue or a PR.
+
+Please read the [AI policy](AI_POLICY.md) before opening a pull request.
+
+---
+
 ## Changelog ⏳
 
 View remotefs-kube's changelog [HERE](CHANGELOG.md)
