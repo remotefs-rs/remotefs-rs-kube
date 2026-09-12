@@ -9,11 +9,11 @@ use std::sync::Arc;
 
 use k8s_openapi::api::core::v1::Pod;
 use kube::{Api, Client, Config};
+use remotefs::File;
 use remotefs::fs::{
     FileType, Metadata, ReadStream, RemoteError, RemoteErrorType, RemoteFs, RemoteResult, UnixPex,
     Welcome, WriteStream,
 };
-use remotefs::File;
 use tokio::runtime::Runtime;
 
 use self::path::KubePath;
@@ -722,7 +722,6 @@ mod test {
     #[cfg(feature = "integration-tests")]
     use pretty_assertions::assert_eq;
 
-    #[cfg(feature = "integration-tests")]
     use super::*;
 
     #[test]
@@ -735,9 +734,11 @@ mod test {
         // Append to file
         let file_data = "Hello, world!\n";
         let reader = Cursor::new(file_data.as_bytes());
-        assert!(client
-            .append_file(p, &Metadata::default(), Box::new(reader))
-            .is_err());
+        assert!(
+            client
+                .append_file(p, &Metadata::default(), Box::new(reader))
+                .is_err()
+        );
         finalize_client(pods, client);
     }
 
@@ -766,15 +767,19 @@ mod test {
     fn should_change_directory_relative() {
         crate::log_init();
         let (pods, mut client) = setup_client();
-        assert!(client
-            .create_dir(
-                Path::new("should_change_directory_relative"),
-                UnixPex::from(0o755)
-            )
-            .is_ok());
-        assert!(client
-            .change_dir(Path::new("should_change_directory_relative/"))
-            .is_ok());
+        assert!(
+            client
+                .create_dir(
+                    Path::new("should_change_directory_relative"),
+                    UnixPex::from(0o755)
+                )
+                .is_ok()
+        );
+        assert!(
+            client
+                .change_dir(Path::new("should_change_directory_relative/"))
+                .is_ok()
+        );
         finalize_client(pods, client);
     }
 
@@ -783,9 +788,11 @@ mod test {
     fn should_not_change_directory() {
         crate::log_init();
         let (pods, mut client) = setup_client();
-        assert!(client
-            .change_dir(Path::new("/tmp/sdfghjuireghiuergh/useghiyuwegh"))
-            .is_err());
+        assert!(
+            client
+                .change_dir(Path::new("/tmp/sdfghjuireghiuergh/useghiyuwegh"))
+                .is_err()
+        );
         finalize_client(pods, client);
     }
 
@@ -832,9 +839,11 @@ mod test {
         crate::log_init();
         let (pods, mut client) = setup_client();
         // create directory
-        assert!(client
-            .create_dir(Path::new("mydir"), UnixPex::from(0o755))
-            .is_ok());
+        assert!(
+            client
+                .create_dir(Path::new("mydir"), UnixPex::from(0o755))
+                .is_ok()
+        );
         let p = PathBuf::from(format!("{}/mydir", client.pwd().unwrap().display()));
         assert!(client.exists(&p).unwrap());
         finalize_client(pods, client);
@@ -846,9 +855,11 @@ mod test {
         crate::log_init();
         let (pods, mut client) = setup_client();
         // create directory
-        assert!(client
-            .create_dir(Path::new("mydir"), UnixPex::from(0o755))
-            .is_ok());
+        assert!(
+            client
+                .create_dir(Path::new("mydir"), UnixPex::from(0o755))
+                .is_ok()
+        );
         assert_eq!(
             client
                 .create_dir(Path::new("mydir"), UnixPex::from(0o755))
@@ -866,12 +877,14 @@ mod test {
         crate::log_init();
         let (pods, mut client) = setup_client();
         // create directory
-        assert!(client
-            .create_dir(
-                Path::new("/tmp/werfgjwerughjwurih/iwerjghiwgui"),
-                UnixPex::from(0o755)
-            )
-            .is_err());
+        assert!(
+            client
+                .create_dir(
+                    Path::new("/tmp/werfgjwerughjwurih/iwerjghiwgui"),
+                    UnixPex::from(0o755)
+                )
+                .is_err()
+        );
         finalize_client(pods, client);
     }
 
@@ -1025,9 +1038,11 @@ mod test {
         // Verify size
         let dest = Path::new("/tmp/wuefhiwuerfh/whjhh/b.txt");
         assert!(client.mov(p, dest).is_err());
-        assert!(client
-            .mov(Path::new("/tmp/wuefhiwuerfh/whjhh/b.txt"), p)
-            .is_err());
+        assert!(
+            client
+                .mov(Path::new("/tmp/wuefhiwuerfh/whjhh/b.txt"), p)
+                .is_err()
+        );
         finalize_client(pods, client);
     }
 
@@ -1055,9 +1070,11 @@ mod test {
         let (pods, mut client) = setup_client();
         // Verify size
         let buffer: Box<dyn std::io::Write + Send> = Box::new(Vec::with_capacity(512));
-        assert!(client
-            .open_file(Path::new("/tmp/aashafb/hhh"), buffer)
-            .is_err());
+        assert!(
+            client
+                .open_file(Path::new("/tmp/aashafb/hhh"), buffer)
+                .is_err()
+        );
         finalize_client(pods, client);
     }
 
@@ -1078,9 +1095,11 @@ mod test {
         // Create dir
         let mut dir_path = client.pwd().ok().unwrap();
         dir_path.push(Path::new("test/"));
-        assert!(client
-            .create_dir(dir_path.as_path(), UnixPex::from(0o775))
-            .is_ok());
+        assert!(
+            client
+                .create_dir(dir_path.as_path(), UnixPex::from(0o775))
+                .is_ok()
+        );
         // Create file
         let mut file_path = dir_path.clone();
         file_path.push(Path::new("a.txt"));
@@ -1088,9 +1107,11 @@ mod test {
         let reader = Cursor::new(file_data.as_bytes());
         let mut metadata = Metadata::default();
         metadata.size = file_data.len() as u64;
-        assert!(client
-            .create_file(file_path.as_path(), &metadata, Box::new(reader))
-            .is_ok());
+        assert!(
+            client
+                .create_file(file_path.as_path(), &metadata, Box::new(reader))
+                .is_ok()
+        );
         // Remove dir
         assert!(client.remove_dir_all(dir_path.as_path()).is_ok());
         finalize_client(pods, client);
@@ -1102,9 +1123,11 @@ mod test {
         crate::log_init();
         let (pods, mut client) = setup_client();
         // Remove dir
-        assert!(client
-            .remove_dir_all(Path::new("/tmp/aaaaaa/asuhi"))
-            .is_err());
+        assert!(
+            client
+                .remove_dir_all(Path::new("/tmp/aaaaaa/asuhi"))
+                .is_err()
+        );
         finalize_client(pods, client);
     }
 
@@ -1116,9 +1139,11 @@ mod test {
         // Create dir
         let mut dir_path = client.pwd().ok().unwrap();
         dir_path.push(Path::new("test/"));
-        assert!(client
-            .create_dir(dir_path.as_path(), UnixPex::from(0o775))
-            .is_ok());
+        assert!(
+            client
+                .create_dir(dir_path.as_path(), UnixPex::from(0o775))
+                .is_ok()
+        );
         assert!(client.remove_dir(dir_path.as_path()).is_ok());
         finalize_client(pods, client);
     }
@@ -1131,9 +1156,11 @@ mod test {
         // Create dir
         let mut dir_path = client.pwd().ok().unwrap();
         dir_path.push(Path::new("test/"));
-        assert!(client
-            .create_dir(dir_path.as_path(), UnixPex::from(0o775))
-            .is_ok());
+        assert!(
+            client
+                .create_dir(dir_path.as_path(), UnixPex::from(0o775))
+                .is_ok()
+        );
         // Create file
         let mut file_path = dir_path.clone();
         file_path.push(Path::new("a.txt"));
@@ -1141,9 +1168,11 @@ mod test {
         let reader = Cursor::new(file_data.as_bytes());
         let mut metadata = Metadata::default();
         metadata.size = file_data.len() as u64;
-        assert!(client
-            .create_file(file_path.as_path(), &metadata, Box::new(reader))
-            .is_ok());
+        assert!(
+            client
+                .create_file(file_path.as_path(), &metadata, Box::new(reader))
+                .is_ok()
+        );
         // Remove dir
         assert!(client.remove_dir(dir_path.as_path()).is_err());
         finalize_client(pods, client);
@@ -1180,22 +1209,24 @@ mod test {
         metadata.size = file_data.len() as u64;
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
 
-        assert!(client
-            .setstat(
-                p,
-                Metadata {
-                    accessed: Some(SystemTime::UNIX_EPOCH),
-                    created: None,
-                    file_type: FileType::File,
-                    gid: Some(1000),
-                    mode: Some(UnixPex::from(0o755)),
-                    modified: Some(SystemTime::UNIX_EPOCH),
-                    size: 7,
-                    symlink: None,
-                    uid: Some(1000),
-                }
-            )
-            .is_ok());
+        assert!(
+            client
+                .setstat(
+                    p,
+                    Metadata {
+                        accessed: Some(SystemTime::UNIX_EPOCH),
+                        created: None,
+                        file_type: FileType::File,
+                        gid: Some(1000),
+                        mode: Some(UnixPex::from(0o755)),
+                        modified: Some(SystemTime::UNIX_EPOCH),
+                        size: 7,
+                        symlink: None,
+                        uid: Some(1000),
+                    }
+                )
+                .is_ok()
+        );
         let entry = client.stat(p).ok().unwrap();
         let stat = entry.metadata();
         assert_eq!(stat.accessed, None);
@@ -1214,22 +1245,24 @@ mod test {
         let (pods, mut client) = setup_client();
         // Create file
         let p = Path::new("bbbbb/cccc/a.sh");
-        assert!(client
-            .setstat(
-                p,
-                Metadata {
-                    accessed: None,
-                    created: None,
-                    file_type: FileType::File,
-                    gid: Some(1),
-                    mode: Some(UnixPex::from(0o755)),
-                    modified: None,
-                    size: 7,
-                    symlink: None,
-                    uid: Some(1),
-                }
-            )
-            .is_err());
+        assert!(
+            client
+                .setstat(
+                    p,
+                    Metadata {
+                        accessed: None,
+                        created: None,
+                        file_type: FileType::File,
+                        gid: Some(1),
+                        mode: Some(UnixPex::from(0o755)),
+                        modified: None,
+                        size: 7,
+                        symlink: None,
+                        uid: Some(1),
+                    }
+                )
+                .is_err()
+        );
         finalize_client(pods, client);
     }
 
@@ -1309,9 +1342,11 @@ mod test {
         let symlink = Path::new("b.sh");
         let file_data = "echo 5\n";
         let reader = Cursor::new(file_data.as_bytes());
-        assert!(client
-            .create_file(symlink, &metadata, Box::new(reader))
-            .is_ok());
+        assert!(
+            client
+                .create_file(symlink, &metadata, Box::new(reader))
+                .is_ok()
+        );
 
         assert!(client.symlink(symlink, p).is_err());
         assert!(client.remove_file(symlink).is_ok());
@@ -1439,9 +1474,9 @@ mod test {
         crate::log_init();
         // setup pod with random name
 
+        use kube::ResourceExt as _;
         use kube::api::PostParams;
         use kube::config::AuthInfo;
-        use kube::ResourceExt as _;
 
         let runtime = Arc::new(
             tokio::runtime::Builder::new_current_thread()
@@ -1465,18 +1500,9 @@ mod test {
 
         debug!("Auth info: {auth_info:?}");
 
-        let config = Config {
-            cluster_url: format!("https://{minikube_ip}:8443").parse().unwrap(),
-            default_namespace: "default".to_string(),
-            read_timeout: None,
-            root_cert: None,
-            connect_timeout: None,
-            write_timeout: None,
-            accept_invalid_certs: true,
-            auth_info,
-            proxy_url: None,
-            tls_server_name: None,
-        };
+        let mut config = Config::new(format!("https://{minikube_ip}:8443").parse().unwrap());
+        config.accept_invalid_certs = true;
+        config.auth_info = auth_info;
 
         let pod_names = (0..2)
             .into_iter()
@@ -1559,10 +1585,10 @@ mod test {
 
     #[cfg(feature = "integration-tests")]
     fn generate_pod_name() -> String {
-        use rand::distributions::Alphanumeric;
-        use rand::{thread_rng, Rng as _};
+        use rand::RngExt as _;
+        use rand::distr::Alphanumeric;
 
-        let mut rng = thread_rng();
+        let mut rng = rand::rng();
         let random_string: String = std::iter::repeat(())
             .map(|()| rng.sample(Alphanumeric))
             .map(char::from)
@@ -1576,9 +1602,9 @@ mod test {
 
     #[cfg(feature = "integration-tests")]
     fn generate_tempdir() -> String {
-        use rand::distributions::Alphanumeric;
-        use rand::{thread_rng, Rng};
-        let mut rng = thread_rng();
+        use rand::RngExt;
+        use rand::distr::Alphanumeric;
+        let mut rng = rand::rng();
         let name: String = std::iter::repeat(())
             .map(|()| rng.sample(Alphanumeric))
             .map(char::from)

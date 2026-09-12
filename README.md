@@ -54,7 +54,7 @@ remotefs-kube = "^0.4"
 
 these features are supported:
 
-- `find`: enable `find()` method for RemoteFs. (*enabled by default*)
+- `find`: enable `find()` method for RemoteFs. (_enabled by default_)
 - `no-log`: disable logging. By default, this library will log via the `log` crate.
 
 The library provides two different clients:
@@ -86,7 +86,6 @@ This client creates an abstract file system with the following structure
 So paths have the following structure: `/pod-name/container-name/path/to/file`.
 
 ```rust
-
 // import remotefs trait and client
 use remotefs::RemoteFs;
 use remotefs_kube::KubeMultiPodFs;
@@ -115,7 +114,6 @@ assert!(client.disconnect().is_ok());
 Here is a basic usage example, with the `KubeContainerFs` client, which is used to connect and interact with a single container on a certain pod. This client gives the entire access to the container file system.
 
 ```rust
-
 // import remotefs trait and client
 use remotefs::RemoteFs;
 use remotefs_kube::KubeContainerFs;
@@ -148,7 +146,7 @@ The following table states the compatibility for the client client and the remot
 Note: `connect()`, `disconnect()` and `is_connected()` **MUST** always be supported, and are so omitted in the table.
 
 | Client/Method  | Kube |
-|----------------|------|
+| -------------- | ---- |
 | append_file    | No   |
 | append         | No   |
 | change_dir     | Yes  |
@@ -171,6 +169,7 @@ Note: `connect()`, `disconnect()` and `is_connected()` **MUST** always be suppor
 | symlink        | Yes  |
 
 ---
+
 ---
 
 ## Changelog ⏳
