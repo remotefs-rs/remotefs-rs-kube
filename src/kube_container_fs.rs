@@ -1962,8 +1962,29 @@ mod test {
     }
 
     #[cfg(feature = "integration-tests")]
-    fn finalize_client(_pods: Api<Pod>, mut client: KubeContainerFs) {
+    fn finalize_client(pods: Api<Pod>, mut client: KubeContainerFs) {
+        if let Err(err) = client.runtime.clone().block_on(delete_test_pods(&pods)) {
+            warn!("failed to clean up test pods: {err}");
+        }
         assert!(client.disconnect().is_ok());
+    }
+
+    /// Delete every pod named by [`generate_pod_name`], leaving pods created
+    /// by other test runs alone. Test pods are never deleted after use
+    /// otherwise, and a single-node Minikube cluster runs out of room to
+    /// schedule new ones after a couple dozen accumulate.
+    #[cfg(feature = "integration-tests")]
+    async fn delete_test_pods(pods: &Api<Pod>) -> kube::Result<()> {
+        use kube::ResourceExt as _;
+        use kube::api::DeleteParams;
+
+        for pod in pods.list(&Default::default()).await? {
+            let name = pod.name_any();
+            if name.starts_with("test-") {
+                pods.delete(&name, &DeleteParams::default()).await?;
+            }
+        }
+        Ok(())
     }
 
     #[cfg(feature = "integration-tests")]
