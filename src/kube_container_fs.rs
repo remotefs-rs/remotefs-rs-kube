@@ -130,15 +130,9 @@ impl KubeContainerFs {
                     Err(_) => SystemTime::UNIX_EPOCH,
                 };
                 // Get uid
-                let uid: Option<u32> = match metadata.get(4).unwrap().as_str().parse::<u32>() {
-                    Ok(uid) => Some(uid),
-                    Err(_) => None,
-                };
+                let uid: Option<u32> = metadata.get(4).unwrap().as_str().parse::<u32>().ok();
                 // Get gid
-                let gid: Option<u32> = match metadata.get(5).unwrap().as_str().parse::<u32>() {
-                    Ok(gid) => Some(gid),
-                    Err(_) => None,
-                };
+                let gid: Option<u32> = metadata.get(5).unwrap().as_str().parse::<u32>().ok();
                 // Get filesize
                 let size = metadata
                     .get(6)
@@ -957,8 +951,10 @@ mod test {
         let p = Path::new("a.txt");
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
         assert!(client.copy(p, Path::new("b.txt")).is_ok());
         assert!(client.stat(p).is_ok());
@@ -976,8 +972,10 @@ mod test {
         let p = Path::new("a.txt");
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
         assert!(client.copy(p, Path::new("aaa/bbbb/ccc/b.txt")).is_err());
         finalize_client(pods, client);
@@ -1051,8 +1049,10 @@ mod test {
         let p = Path::new("a.txt");
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert_eq!(
             client.create_file(p, &metadata, Box::new(reader)).unwrap(),
             10
@@ -1072,8 +1072,10 @@ mod test {
         let p = Path::new("/tmp/ahsufhauiefhuiashf/hfhfhfhf");
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_err());
         finalize_client(pods, client);
     }
@@ -1102,8 +1104,10 @@ mod test {
         let p = Path::new("a.txt");
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
         // Verify size
         assert_eq!(client.exists(p).ok().unwrap(), true);
@@ -1127,15 +1131,17 @@ mod test {
         let p = Path::new("a.txt");
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
         // Verify size
         let file = client
             .list_dir(wrkdir.as_path())
             .ok()
             .unwrap()
-            .get(0)
+            .first()
             .unwrap()
             .clone();
         assert_eq!(file.name().as_str(), "a.txt");
@@ -1168,8 +1174,10 @@ mod test {
         let p = Path::new("a.txt");
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
         // Verify size
         let dest = Path::new("b.txt");
@@ -1189,8 +1197,10 @@ mod test {
         let p = Path::new("a.txt");
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
         // Verify size
         let dest = Path::new("/tmp/wuefhiwuerfh/whjhh/b.txt");
@@ -1266,8 +1276,10 @@ mod test {
         file_path.push(Path::new("a.txt"));
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(
             client
                 .create_file(file_path.as_path(), &metadata, Box::new(reader))
@@ -1330,8 +1342,10 @@ mod test {
         file_path.push(Path::new("a.txt"));
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(
             client
                 .create_file(file_path.as_path(), &metadata, Box::new(reader))
@@ -1352,8 +1366,10 @@ mod test {
         let p = Path::new("a.txt");
         let file_data = "test data\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
         assert!(client.remove_file(p).is_ok());
         finalize_client(pods, client);
@@ -1369,8 +1385,10 @@ mod test {
         let p = Path::new("a.sh");
         let file_data = "echo 5\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
 
         assert!(
@@ -1441,8 +1459,10 @@ mod test {
         let p = Path::new("a.sh");
         let file_data = "echo 5\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert_eq!(
             client
                 .create_file(p, &metadata, Box::new(reader))
@@ -1482,8 +1502,10 @@ mod test {
         let p = Path::new("a.sh");
         let file_data = "echo 5\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
         let symlink = Path::new("b.sh");
         assert!(client.symlink(symlink, p).is_ok());
@@ -1501,8 +1523,10 @@ mod test {
         let p = Path::new("a.sh");
         let file_data = "echo 5\n";
         let reader = Cursor::new(file_data.as_bytes());
-        let mut metadata = Metadata::default();
-        metadata.size = file_data.len() as u64;
+        let metadata = Metadata {
+            size: file_data.len() as u64,
+            ..Default::default()
+        };
         assert!(client.create_file(p, &metadata, Box::new(reader)).is_ok());
         let symlink = Path::new("b.sh");
         let file_data = "echo 5\n";
@@ -1806,8 +1830,10 @@ mod test {
         // setup pod
         debug!("setting up pod");
         // config for minikube
-        let mut auth_info = AuthInfo::default();
-        auth_info.username = Some("minikube".to_string());
+        let mut auth_info = AuthInfo {
+            username: Some("minikube".to_string()),
+            ..Default::default()
+        };
         // get home
         let home = std::env::var("HOME").unwrap();
         auth_info.client_certificate =
