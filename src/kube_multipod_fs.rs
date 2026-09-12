@@ -19,23 +19,58 @@ use tokio::runtime::Runtime;
 use self::path::KubePath;
 use crate::KubeContainerFs;
 
-/// Kube MultiPod FS
+/// A [`RemoteFs`] client exposing every pod and container in a namespace as
+/// one abstract file system.
 ///
-/// The `KubeMultiPodFs` client is a client that allows you to interact with multiple pods in a Kubernetes cluster.
+/// Paths have the form `/pod-name/container-name/path/to/file`. Underneath,
+/// `KubeMultiPodFs` delegates to a single [`KubeContainerFs`], repointing it
+/// at the pod and container named in the path before each operation.
 ///
-/// Underneath it uses the `KubeContainerFs` client to interact with the pods, but it changes the current pod and
-/// the container name under the hood, to simulate a multi-pod filesystem.
+/// # Examples
 ///
-/// Path are relative to the current pod and container and have the following format:
+/// ```rust,no_run
+/// use std::sync::Arc;
 ///
-/// /pod-name/container-name/path/to/file
+/// use remotefs::RemoteFs;
+/// use remotefs_kube::KubeMultiPodFs;
+///
+/// let runtime = Arc::new(
+///     tokio::runtime::Builder::new_current_thread()
+///         .enable_all()
+///         .build()
+///         .expect("failed to build the Tokio runtime"),
+/// );
+/// let mut client = KubeMultiPodFs::new(&runtime);
+/// client.connect().expect("connection failed");
+/// ```
 pub struct KubeMultiPodFs {
     kube: KubeContainerFs,
     runtime: Arc<Runtime>,
 }
 
 impl KubeMultiPodFs {
-    /// Create a new `KubeMultiPodFs` client
+    /// Create a client over the default namespace.
+    ///
+    /// If [`KubeMultiPodFs::config`] is not called before
+    /// [`connect`](RemoteFs::connect), the client falls back to the default
+    /// kubeconfig (or the in-cluster configuration, when running inside a
+    /// pod).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::sync::Arc;
+    ///
+    /// use remotefs_kube::KubeMultiPodFs;
+    ///
+    /// let runtime = Arc::new(
+    ///     tokio::runtime::Builder::new_current_thread()
+    ///         .enable_all()
+    ///         .build()
+    ///         .expect("failed to build the Tokio runtime"),
+    /// );
+    /// let client = KubeMultiPodFs::new(&runtime);
+    /// ```
     pub fn new(runtime: &Arc<Runtime>) -> Self {
         Self {
             kube: KubeContainerFs::new("", "", runtime),
@@ -43,7 +78,8 @@ impl KubeMultiPodFs {
         }
     }
 
-    /// Set configuration
+    /// Set the Kubernetes client configuration to use on
+    /// [`connect`](RemoteFs::connect), instead of the default kubeconfig.
     pub fn config(mut self, config: Config) -> Self {
         self.kube = self.kube.config(config);
         self

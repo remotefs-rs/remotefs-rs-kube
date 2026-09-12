@@ -27,7 +27,31 @@ static LS_RE: Lazy<Regex> = lazy_regex!(
     r#"^([\-ld])([\-rwxsStT]{9})\s+(\d+)\s+(.+)\s+(.+)\s+(\d+)\s+(\w{3}\s+\d{1,2}\s+(?:\d{1,2}:\d{1,2}|\d{4}))\s+(.+)$"#
 );
 
-/// Kube "filesystem" client to interact with a container in a pod
+/// A [`RemoteFs`] client speaking to a single Kubernetes pod container.
+///
+/// The client shells out to POSIX utilities (`cat`, `tar`, `ls`, `rm`, ...)
+/// inside the container over the pod exec stream, since Kubernetes has no
+/// native remote file system API. It keeps the pod and container name, the
+/// current working directory, and the shared Tokio [`Runtime`] used to drive
+/// the async `kube` client from synchronous [`RemoteFs`] methods.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use std::sync::Arc;
+///
+/// use remotefs::RemoteFs;
+/// use remotefs_kube::KubeContainerFs;
+///
+/// let runtime = Arc::new(
+///     tokio::runtime::Builder::new_current_thread()
+///         .enable_all()
+///         .build()
+///         .expect("failed to build the Tokio runtime"),
+/// );
+/// let mut client = KubeContainerFs::new("my-pod", "container-name", &runtime);
+/// client.connect().expect("connection failed");
+/// ```
 pub struct KubeContainerFs {
     pub(crate) config: Option<Config>,
     pub(crate) container: String,
@@ -38,9 +62,28 @@ pub struct KubeContainerFs {
 }
 
 impl KubeContainerFs {
-    /// Creates a new `KubeFs`
+    /// Create a client for `container` on `pod_name`.
     ///
-    /// If `config()` is not called then, it will try to use the configuration from the default kubeconfig file
+    /// If [`KubeContainerFs::config`] is not called before
+    /// [`connect`](RemoteFs::connect), the client falls back to the default
+    /// kubeconfig (or the in-cluster configuration, when running inside a
+    /// pod).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use std::sync::Arc;
+    ///
+    /// use remotefs_kube::KubeContainerFs;
+    ///
+    /// let runtime = Arc::new(
+    ///     tokio::runtime::Builder::new_current_thread()
+    ///         .enable_all()
+    ///         .build()
+    ///         .expect("failed to build the Tokio runtime"),
+    /// );
+    /// let client = KubeContainerFs::new("my-pod", "container-name", &runtime);
+    /// ```
     pub fn new(pod_name: impl ToString, container: impl ToString, runtime: &Arc<Runtime>) -> Self {
         Self {
             config: None,
@@ -52,7 +95,8 @@ impl KubeContainerFs {
         }
     }
 
-    /// Set configuration
+    /// Set the Kubernetes client configuration to use on
+    /// [`connect`](RemoteFs::connect), instead of the default kubeconfig.
     pub fn config(mut self, config: Config) -> Self {
         self.config = Some(config);
         self

@@ -15,9 +15,9 @@
       src="https://img.shields.io/badge/License-MIT-teal.svg"
       alt="License-MIT"
   /></a>
-  <a href="https://github.com/veeso/remotefs-rs-kube/stargazers"
+  <a href="https://github.com/remotefs-rs/remotefs-rs-kube/stargazers"
     ><img
-      src="https://img.shields.io/github/stars/veeso/remotefs-rs-kube.svg?style=badge"
+      src="https://img.shields.io/github/stars/remotefs-rs/remotefs-rs-kube.svg?style=badge"
       alt="Repo stars"
   /></a>
   <a href="https://crates.io/crates/remotefs-kube"
@@ -41,15 +41,16 @@
 
 ## About remotefs-kube ☁️
 
-remotefs client implementation for Kube.
+remotefs-kube is a client implementation for [remotefs](https://github.com/remotefs-rs/remotefs-rs), giving shell-level access to the containers of a Kubernetes pod.
 
 ## Get started
 
-First of all you need to add **remotefs** and the client to your project dependencies:
+First of all you need to add **remotefs** and **remotefs-kube** to your project dependencies:
 
 ```toml
-remotefs = "^0.3"
-remotefs-kube = "^0.4"
+[dependencies]
+remotefs = "0.3"
+remotefs-kube = "0.4"
 ```
 
 these features are supported:
@@ -86,27 +87,30 @@ This client creates an abstract file system with the following structure
 So paths have the following structure: `/pod-name/container-name/path/to/file`.
 
 ```rust
-// import remotefs trait and client
+use std::path::Path;
+use std::sync::Arc;
+
 use remotefs::RemoteFs;
 use remotefs_kube::KubeMultiPodFs;
-use std::path::Path;
 
-let rt = Arc::new(
+let runtime = Arc::new(
     tokio::runtime::Builder::new_current_thread()
-    .enable_all()
-    .build()
-    .unwrap(),
+        .enable_all()
+        .build()
+        .expect("failed to build the Tokio runtime"),
 );
-let mut client: KubeMultiPodFs = KubeMultiPodFs::new(&rt);
+let mut client = KubeMultiPodFs::new(&runtime);
 
-// connect
-assert!(client.connect().is_ok());
-// get working directory
-println!("Wrkdir: {}", client.pwd().ok().unwrap().display());
-// change working directory
-assert!(client.change_dir(Path::new("/my-pod/alpine/tmp")).is_ok());
+// connect, using the default kubeconfig
+client.connect().expect("connection failed");
+// print the working directory
+println!("wrkdir: {wrkdir}", wrkdir = client.pwd().expect("pwd failed").display());
+// change the working directory to a container's `/tmp`
+client
+    .change_dir(Path::new("/my-pod/alpine/tmp"))
+    .expect("cd failed");
 // disconnect
-assert!(client.disconnect().is_ok());
+client.disconnect().expect("disconnection failed");
 ```
 
 ### Kube container client
@@ -114,27 +118,28 @@ assert!(client.disconnect().is_ok());
 Here is a basic usage example, with the `KubeContainerFs` client, which is used to connect and interact with a single container on a certain pod. This client gives the entire access to the container file system.
 
 ```rust
-// import remotefs trait and client
+use std::path::Path;
+use std::sync::Arc;
+
 use remotefs::RemoteFs;
 use remotefs_kube::KubeContainerFs;
-use std::path::Path;
 
-let rt = Arc::new(
+let runtime = Arc::new(
     tokio::runtime::Builder::new_current_thread()
-    .enable_all()
-    .build()
-    .unwrap(),
+        .enable_all()
+        .build()
+        .expect("failed to build the Tokio runtime"),
 );
-let mut client: KubeContainerFs = KubeContainerFs::new("my-pod", "container-name", &rt);
+let mut client = KubeContainerFs::new("my-pod", "container-name", &runtime);
 
-// connect
-assert!(client.connect().is_ok());
-// get working directory
-println!("Wrkdir: {}", client.pwd().ok().unwrap().display());
-// change working directory
-assert!(client.change_dir(Path::new("/tmp")).is_ok());
+// connect, using the default kubeconfig
+client.connect().expect("connection failed");
+// print the working directory
+println!("wrkdir: {wrkdir}", wrkdir = client.pwd().expect("pwd failed").display());
+// change the working directory
+client.change_dir(Path::new("/tmp")).expect("cd failed");
 // disconnect
-assert!(client.disconnect().is_ok());
+client.disconnect().expect("disconnection failed");
 ```
 
 ---
