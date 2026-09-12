@@ -1913,7 +1913,8 @@ mod test {
                 "spec": {
                     "containers": [{
                       "name": "alpine",
-                      "image": "alpine" ,
+                      "image": "alpine:3.20",
+                      "imagePullPolicy": "IfNotPresent",
                       "command": ["tail", "-f", "/dev/null"],
                     }],
                 }
