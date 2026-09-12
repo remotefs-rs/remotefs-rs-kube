@@ -68,7 +68,7 @@ jobs:
       - name: Build
         run: just build "--features find,integration-tests"
       - name: Test with coverage
-        run: just coverage "lcov.info" "--features find,integration-tests"
+        run: just coverage "lcov.info" "--features find,integration-tests -- --test-threads=1"
         env:
           RUST_LOG: trace
       - name: Upload to Coveralls
