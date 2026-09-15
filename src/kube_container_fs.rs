@@ -232,7 +232,9 @@ impl KubeContainerFs {
         debug!("Opening write stream: {script}");
         let params = AttachParams::default()
             .stdin(true)
-            .stdout(false)
+            // Kubernetes runtimes may require an output channel even when
+            // the command redirects stdout to the target file.
+            .stdout(true)
             .stderr(false);
         let mut process = exec.spawn(&["/bin/sh", "-c", &script], params).await?;
         let stdin = process.stdin().ok_or_else(|| {
