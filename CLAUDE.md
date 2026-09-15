@@ -15,6 +15,7 @@ recipe, add one under `just/` before using it. Run `just` to list all recipes.
 just build                 # cargo build --all-targets
 just release               # release build
 just test                  # cargo test --lib, then --doc
+just integration           # cluster-backed integration tests
 just minikube_up           # start the Minikube cluster
 just minikube_down         # stop the Minikube cluster
 just coverage              # cargo llvm-cov, writes lcov.info
@@ -37,8 +38,8 @@ just publish "--dry-run --allow-dirty"
 The tests behind the `integration-tests` feature need a live Kubernetes
 cluster reachable via the local kubeconfig and the `MINIKUBE_IP` environment
 variable pointing at it. Start one with `just minikube_up`, then run
-`just test "--features integration-tests"` with `MINIKUBE_IP` set to the
-cluster's IP (`minikube ip`). Plain unit and doc tests need neither.
+`just integration` with `MINIKUBE_IP` set to the cluster's IP
+(`minikube ip`). Plain unit and doc tests need neither.
 
 If a required tool is missing, say so. Never claim a check passed or silently
 swap in a weaker command.
@@ -50,18 +51,24 @@ client implementation providing access to Kubernetes pods and containers. It
 is a library-only crate (`src/lib.rs`, crate name `remotefs_kube`) with no
 binaries or examples.
 
-- **Two clients.** `KubeContainerFs` (`src/kube_container_fs.rs`) implements
-  `remotefs::RemoteFs` over a single container's filesystem, using `kube`'s
-  `AttachedProcess` to exec commands inside the container. `KubeMultiPodFs`
-  (`src/kube_multipod_fs.rs`) wraps a namespace's pods and containers into one
-  abstract tree (`/pod/container/...`), delegating file operations to a
-  `KubeContainerFs` per container once a path is resolved with
-  `src/kube_multipod_fs/path.rs`.
-- **No native protocol.** Kubernetes has no remote filesystem API, so both
-  clients shell out to POSIX utilities (`cat`, `tar`, `ls`, `rm`, ...) inside
-  the target container over the pod exec stream. `src/utils/parser.rs` and
-  `src/utils/fmt.rs` parse command output (`ls -la`, `stat`) back into
-  `remotefs::File` entries; `src/utils/path.rs` holds shared path helpers.
+- **Two async clients.** `KubeContainerFs` (`src/kube_container_fs.rs`)
+  implements `remotefs::AsyncRemoteFs` over a single container's filesystem.
+  `src/kube_container_fs/exec.rs` (`KubeExec`) runs `/bin/sh -c` commands
+  through `kube`'s `AttachedProcess`; `src/kube_container_fs/stream.rs`
+  wraps a `cat`/`tail`/`head` process into owned `AsyncRemoteRead` /
+  `AsyncRemoteWrite` streams whose `finish` waits for the remote exit status.
+  `KubeMultiPodFs` (`src/kube_multipod_fs.rs`) exposes a namespace as
+  `/pod/container/...` (parsed by `src/kube_multipod_fs/path.rs`) and
+  delegates to a throw-away `KubeContainerFs::attached` per call, so it has
+  no mutable per-call state. The `tokio` feature adds `into_blocking`
+  (`remotefs::adapters::blocking::BlockOn`) for blocking `RemoteFs` callers.
+- **No native protocol, no working directory.** Kubernetes has no remote
+  filesystem API, so both clients shell out to POSIX utilities inside the
+  target container. Every path is validated by
+  `utils::path::ensure_posix_absolute` before the connection check and
+  quoted with `utils::path::shell_quote`. `src/utils/parser.rs` and
+  `src/utils/fmt.rs` parse `ls -la` output back into `remotefs::File`
+  entries.
 - **Command layer.** `Justfile` is a thin importer. Each recipe group lives in
   its own file under `just/` (`build`, `test`, `code_check`, `changelog`,
   `publish`) and carries a `[group(...)]` attribute so `just --list` stays
