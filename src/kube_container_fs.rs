@@ -32,12 +32,9 @@ static LS_RE: Lazy<Regex> = lazy_regex!(
     r#"^([\-ld])([\-rwxsStT]{9})\s+(\d+)\s+(.+)\s+(.+)\s+(\d+)\s+(\w{3}\s+\d{1,2}\s+(?:\d{1,2}:\d{1,2}|\d{4}))\s+(.+)$"#
 );
 
-fn writer_script(path: &Path, opts: &WriteOptions, redirect: &str) -> String {
+fn writer_script(path: &Path, _opts: &WriteOptions, redirect: &str) -> String {
     let quoted = path_utils::shell_quote(path);
-    match opts.size_hint {
-        Some(size) => format!("head -c {size} {redirect} {quoted}"),
-        None => format!("cat {redirect} {quoted}"),
-    }
+    format!("cat {redirect} {quoted}")
 }
 
 /// Blocking adapter over [`KubeContainerFs`], implementing [`remotefs::RemoteFs`].
@@ -727,45 +724,11 @@ mod test {
         assert!(!client.is_connected());
     }
 
-    #[cfg(unix)]
     #[test]
-    fn size_hinted_writer_completes_without_stdin_eof() {
-        use std::io::Write as _;
-        use std::process::{Command, Stdio};
-        use std::time::{Duration, Instant};
-
-        let path = std::env::temp_dir().join(format!(
-            "remotefs-kube-writer-{}.txt",
-            rand::random::<u64>()
-        ));
+    fn size_hint_does_not_change_writer_command() {
+        let path = Path::new("/tmp/file");
         let opts = WriteOptions::default().size_hint(5);
-        let script = super::writer_script(&path, &opts, ">");
-        let mut child = Command::new("/bin/sh")
-            .args(["-c", &script])
-            .stdin(Stdio::piped())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-            .unwrap();
-        child.stdin.as_mut().unwrap().write_all(b"hello").unwrap();
-
-        let deadline = Instant::now() + Duration::from_secs(1);
-        let status = loop {
-            if let Some(status) = child.try_wait().unwrap() {
-                break status;
-            }
-            if Instant::now() >= deadline {
-                child.kill().unwrap();
-                let _ = child.wait();
-                let _ = std::fs::remove_file(&path);
-                panic!("size-hinted writer waited for stdin EOF");
-            }
-            std::thread::sleep(Duration::from_millis(10));
-        };
-
-        assert!(status.success());
-        assert_eq!(std::fs::read(&path).unwrap(), b"hello");
-        std::fs::remove_file(path).unwrap();
+        assert_eq!(super::writer_script(path, &opts, ">"), "cat > '/tmp/file'");
     }
 
     #[test]
