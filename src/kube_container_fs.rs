@@ -32,9 +32,14 @@ static LS_RE: Lazy<Regex> = lazy_regex!(
     r#"^([\-ld])([\-rwxsStT]{9})\s+(\d+)\s+(.+)\s+(.+)\s+(\d+)\s+(\w{3}\s+\d{1,2}\s+(?:\d{1,2}:\d{1,2}|\d{4}))\s+(.+)$"#
 );
 
-fn writer_script(path: &Path, _opts: &WriteOptions, redirect: &str) -> String {
+const WRITER_STDIN_BUF_SIZE: usize = 64 * 1024;
+
+fn writer_script(path: &Path, opts: &WriteOptions, redirect: &str) -> String {
     let quoted = path_utils::shell_quote(path);
-    format!("cat {redirect} {quoted}")
+    match opts.size_hint {
+        Some(size) => format!("head -c {size} {redirect} {quoted}"),
+        None => format!("cat {redirect} {quoted}"),
+    }
 }
 
 /// Blocking adapter over [`KubeContainerFs`], implementing [`remotefs::RemoteFs`].
@@ -235,7 +240,8 @@ impl KubeContainerFs {
             // Kubernetes runtimes may require an output channel even when
             // the command redirects stdout to the target file.
             .stdout(true)
-            .stderr(false);
+            .stderr(false)
+            .max_stdin_buf_size(WRITER_STDIN_BUF_SIZE);
         let mut process = exec.spawn(&["/bin/sh", "-c", &script], params).await?;
         let stdin = process.stdin().ok_or_else(|| {
             RemoteError::with_message(RemoteErrorType::ProtocolError, "failed to attach stdin")
@@ -727,10 +733,17 @@ mod test {
     }
 
     #[test]
-    fn size_hint_does_not_change_writer_command() {
+    fn writer_command_uses_size_hint_to_bound_remote_read() {
         let path = Path::new("/tmp/file");
+        assert_eq!(
+            super::writer_script(path, &WriteOptions::default(), ">"),
+            "cat > '/tmp/file'"
+        );
         let opts = WriteOptions::default().size_hint(5);
-        assert_eq!(super::writer_script(path, &opts, ">"), "cat > '/tmp/file'");
+        assert_eq!(
+            super::writer_script(path, &opts, ">"),
+            "head -c 5 > '/tmp/file'"
+        );
     }
 
     #[test]
