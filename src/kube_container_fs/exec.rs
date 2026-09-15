@@ -7,6 +7,10 @@ use remotefs::fs::ExecOutput;
 use remotefs::{RemoteError, RemoteErrorType, RemoteResult};
 use tokio::io::AsyncReadExt as _;
 
+fn command_script(cmd: &str) -> String {
+    format!(r#"({cmd}); printf ";$?""#)
+}
+
 /// Runs commands inside one container of one pod.
 ///
 /// Cloning is cheap: `Api<Pod>` is a handle over a shared client.
@@ -50,7 +54,7 @@ impl KubeExec {
 
     /// Run `cmd` through `/bin/sh -c`, returning its stdout and exit code.
     pub(crate) async fn shell(&self, cmd: &str) -> RemoteResult<ExecOutput> {
-        let script = format!(r#"{cmd}; echo -n ";$?""#);
+        let script = command_script(cmd);
         debug!("Executing shell command: {script}");
         let params = AttachParams::default()
             .stdin(false)
@@ -118,5 +122,23 @@ impl KubeExec {
     /// Run `cmd` and return whether it exited with status 0.
     pub(crate) async fn shell_test(&self, cmd: &str) -> RemoteResult<bool> {
         Ok(self.shell(cmd).await?.exit_code == 0)
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    #[cfg(unix)]
+    #[test]
+    fn command_script_preserves_exit_code() {
+        use std::process::Command;
+
+        let output = Command::new("/bin/sh")
+            .args(["-c", &super::command_script("printf output; exit 3")])
+            .output()
+            .unwrap();
+
+        assert!(output.status.success());
+        assert_eq!(output.stdout, b"output;3");
     }
 }

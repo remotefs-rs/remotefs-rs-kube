@@ -32,6 +32,14 @@ static LS_RE: Lazy<Regex> = lazy_regex!(
     r#"^([\-ld])([\-rwxsStT]{9})\s+(\d+)\s+(.+)\s+(.+)\s+(\d+)\s+(\w{3}\s+\d{1,2}\s+(?:\d{1,2}:\d{1,2}|\d{4}))\s+(.+)$"#
 );
 
+fn writer_script(path: &Path, opts: &WriteOptions, redirect: &str) -> String {
+    let quoted = path_utils::shell_quote(path);
+    match opts.size_hint {
+        Some(size) => format!("head -c {size} {redirect} {quoted}"),
+        None => format!("cat {redirect} {quoted}"),
+    }
+}
+
 /// Blocking adapter over [`KubeContainerFs`], implementing [`remotefs::RemoteFs`].
 #[cfg(feature = "tokio")]
 pub type BlockingKubeContainerFs = remotefs::adapters::blocking::BlockOn<KubeContainerFs>;
@@ -213,7 +221,7 @@ impl KubeContainerFs {
         }
     }
 
-    /// Spawn a `cat`-style writer command reading from stdin.
+    /// Spawn a writer command reading from stdin.
     async fn spawn_writer(
         &self,
         path: &Path,
@@ -223,7 +231,7 @@ impl KubeContainerFs {
         let path = path_utils::ensure_posix_absolute(path)?;
         let exec = self.runner()?;
         self.require_parent_dir(exec, path).await?;
-        let script = format!("cat {redirect} {}", path_utils::shell_quote(path));
+        let script = writer_script(path, opts, redirect);
         debug!("Opening write stream: {script}");
         let params = AttachParams::default()
             .stdin(true)
@@ -717,6 +725,47 @@ mod test {
         assert_eq!(client.pod_name(), "test");
         assert_eq!(client.container(), "test");
         assert!(!client.is_connected());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn size_hinted_writer_completes_without_stdin_eof() {
+        use std::io::Write as _;
+        use std::process::{Command, Stdio};
+        use std::time::{Duration, Instant};
+
+        let path = std::env::temp_dir().join(format!(
+            "remotefs-kube-writer-{}.txt",
+            rand::random::<u64>()
+        ));
+        let opts = WriteOptions::default().size_hint(5);
+        let script = super::writer_script(&path, &opts, ">");
+        let mut child = Command::new("/bin/sh")
+            .args(["-c", &script])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap();
+        child.stdin.as_mut().unwrap().write_all(b"hello").unwrap();
+
+        let deadline = Instant::now() + Duration::from_secs(1);
+        let status = loop {
+            if let Some(status) = child.try_wait().unwrap() {
+                break status;
+            }
+            if Instant::now() >= deadline {
+                child.kill().unwrap();
+                let _ = child.wait();
+                let _ = std::fs::remove_file(&path);
+                panic!("size-hinted writer waited for stdin EOF");
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        };
+
+        assert!(status.success());
+        assert_eq!(std::fs::read(&path).unwrap(), b"hello");
+        std::fs::remove_file(path).unwrap();
     }
 
     #[test]
