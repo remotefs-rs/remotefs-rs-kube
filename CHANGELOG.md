@@ -1,60 +1,58 @@
 # Changelog
 
-- [Changelog](#changelog)
-  - [1.0.0](#100)
-  - [0.4.0](#040)
-  - [0.3.0](#030)
-  - [0.2.0](#020)
-  - [0.1.0](#010)
-
----
+All notable changes to this project are documented in this file.
 
 ## 1.0.0
 
-Released on 12/09/2026
+Released on 2026-09-15
 
-- **BREAKING ‼️** Migrated to remotefs 1. `KubeContainerFs` and
-  `KubeMultiPodFs` now implement `remotefs::AsyncRemoteFs` natively and no
-  longer take a Tokio runtime in their constructors.
-- **BREAKING ‼️** Every path must be an absolute POSIX path; `pwd` and
-  `change_dir` are gone. `KubeMultiPodFs` mutating operations on `/`,
-  `/pod`, and `/pod/container` fail with `PermissionDenied`, and `copy`,
-  `rename`, and `symlink` require both paths in the same container.
-- **BREAKING ‼️** `read_file` and `write_file` replace `open_file` and
-  `create_file`, `rename` replaces `mov`, `set_metadata` replaces `setstat`,
-  `exec` returns `ExecOutput`, and `KubeMultiPodFs::exec` is unsupported.
-- Added owned `open`, `create`, and `append` streams over the pod exec
-  stream, with native read offsets and lengths and explicit `finish`.
-- Added `capabilities()`.
-- Added the `tokio` feature with `into_blocking`, returning
-  `BlockingKubeContainerFs` / `BlockingKubeMultiPodFs` for
-  `remotefs::RemoteFs` callers.
-- `WriteOptions::size_hint` is optional; when set it bounds `write_file` and
-  is verified on `finish`.
-- Dropped the `tar` and `tempfile` dependencies: uploads no longer buffer
-  the whole file in memory.
+### Breaking changes
+
+- migrate to remotefs 1
+
+> requires remotefs 1; constructors, path handling, and transfer methods changed.
+
+### Added
+
+- Breaking: migrate to remotefs 1
+
+> KubeContainerFs and KubeMultiPodFs now implement remotefs::AsyncRemoteFs natively and no longer take a Tokio runtime. Every path must be an absolute POSIX path; pwd and change_dir are gone. open, create, and append return owned streams over the pod exec stream that must be finished explicitly; read_file and write_file replace open_file and create_file, rename replaces mov, set_metadata replaces setstat, and exec returns ExecOutput. Read offsets and lengths are honored natively and capabilities() is advertised. Blocking callers enable the tokio feature and call into_blocking to get a BlockingKubeContainerFs or BlockingKubeMultiPodFs implementing remotefs::RemoteFs.
+
+### Fixed
+
+- test is sync and send
 
 ## 0.4.0
 
-Released on 30/09/2024
+Released on 2024-09-30
 
-- remotefs 0.3.0
+### Added
+
+- remotefs 0.3
+
+### Fixed
+
+- bump version
 
 ## 0.3.0
 
-Released on 29/09/2024
+Released on 2024-09-29
 
-- Added `KubeMultiPodFs` to operate on multiple pod and containers at the same time. See docs for details.
-- **BREAKING ‼️** Renamed `KubeFs` to `KubeContainerFs`.
+### Added
 
-## 0.2.0
+- first commit
+- added container name
+- multi pod (#1)
 
-Released on 17/07/2024
+> - feat: multi pod client
+> - fix: tests and fixes
+> - fix: version
+> - fix: changelog
 
-- Added `container` to constructor to specify the container name
+### Fixed
 
-## 0.1.0
-
-Released on 16/07/2024
-
-- First release
+- working on tests
+- io
+- changelog
+- ci
+- ci
